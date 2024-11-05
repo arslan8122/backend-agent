@@ -1,6 +1,4 @@
-"""Chat Node"""
-
-from typing import List, cast
+from typing import List, Dict, cast, Union
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import SystemMessage, AIMessage, ToolMessage
 from langchain.tools import tool
@@ -8,47 +6,59 @@ from copilotkit.langchain import copilotkit_customize_config
 from research_canvas.state import AgentState
 from research_canvas.model import get_model
 from research_canvas.download import get_resource
+from research_canvas.state import BlogPost ,QuoteInfographic ,ComparisonInfographic ,StepsInfographic
 
 @tool
-def Search(queries: List[str]): # pylint: disable=invalid-name,unused-argument
-    """A list of one or more search queries to find good resources to support the research."""
+def Search(queries: List[str]):
+    """Search for references and inspiration for the blog post."""
+    pass
 
 @tool
-def WriteReport(report: str): # pylint: disable=invalid-name,unused-argument
-    """Write the research report."""
+def WriteBlogPost(blog_post: BlogPost):
+    """Write or update the blog post with title and content."""
+    pass
 
 @tool
-def WriteResearchQuestion(research_question: str): # pylint: disable=invalid-name,unused-argument
-    """Write the research question."""
-
-@tool
-def DeleteResources(urls: List[str]): # pylint: disable=invalid-name,unused-argument
-    """Delete the URLs from the resources."""
-
+def GenerateInfographic(quote_info: QuoteInfographic):
+    """Generate an quote based on the blog content."""
+    pass
 
 async def chat_node(state: AgentState, config: RunnableConfig):
     """
-    Chat Node
+    Blog Generator Chat Node
+    
+    Handles the conversation flow for blog generation and infographic creation, including:
+    - Managing blog post creation and updates
+    - Generating content-based infographics
+    - Tracking resources and logs
+    - Coordinating with the AI model
     """
-
+    # Configure state emission for blog post and infographics
     config = copilotkit_customize_config(
         config,
-        emit_intermediate_state=[{
-            "state_key": "report",
-            "tool": "WriteReport",
-            "tool_argument": "report",
-        }, {
-            "state_key": "research_question",
-            "tool": "WriteResearchQuestion",
-            "tool_argument": "research_question",
-        }],
-        emit_tool_calls="DeleteResources"
+        emit_intermediate_state=[
+            {
+                "state_key": "blog_post",
+                "tool": "WriteBlogPost",
+                "tool_argument": "blog_post",
+            },
+            {
+                "state_key": "quote_info",
+                "tool": "GenerateInfographic",
+                "tool_argument": "quote_info",
+            }
+        ]
     )
 
+    # Initialize or get existing state
     state["resources"] = state.get("resources", [])
-    research_question = state.get("research_question", "")
-    report = state.get("report", "")
+    state["blog_post"] = state.get("blog_post", {"title": "", "content": ""})
+    state["quote_info"] = state.get("quote_info", {"type": "", "qoute": "","source":"","context":"" })
+    state["infographics"] = state.get("infographics", [])
+    state["logs"] = state.get("logs", [])
+    state["messages"] = state.get("messages", [])
 
+    # Process resources
     resources = []
     for resource in state["resources"]:
         content = get_resource(resource["url"])
@@ -59,30 +69,27 @@ async def chat_node(state: AgentState, config: RunnableConfig):
             "content": content
         })
 
+    # Invoke the model with tools
     response = await get_model(state).bind_tools(
         [
             Search,
-            Search,
-            WriteReport,
-            WriteResearchQuestion,
-            DeleteResources,
+            WriteBlogPost,
+            GenerateInfographic,
         ],
     ).ainvoke([
         SystemMessage(
             content=f"""
-            You are a research assistant. You help the user with writing a research report.
-            Do not recite the resources, instead use them to answer the user's question.
-            You should use the search tool to get resources before answering the user's question.
-            If you finished writing the report, ask the user proactively for next steps, changes etc, make it engaging.
-            To write the report, you should use the WriteReport tool. Never EVER respond with the report, only use the tool.
-
-            This is the research question:
-            {research_question}
-
-            This is the research report:
-            {report}
-
-            Here are the resources that you have available:
+            You are a professional blog content creator. Your role is to:
+            1. Write engaging blog posts with well-structured content and compelling titles
+            2. Create infographics to visualize key concepts when appropriate
+            
+            Current blog state:
+            Title: {state["blog_post"].get("title", "")}
+            Content: {state["blog_post"].get("content", "")}
+            
+            Current Quote: {state["quote_info"].get("quote","")}
+            
+            Available resources:
             {resources}
             """
         ),
@@ -90,25 +97,44 @@ async def chat_node(state: AgentState, config: RunnableConfig):
     ], config)
 
     ai_message = cast(AIMessage, response)
+    updated_messages = list(state["messages"])
+    updated_messages.append(ai_message)
 
+    # Handle tool calls
     if ai_message.tool_calls:
-        if ai_message.tool_calls[0]["name"] == "WriteReport":
-            return {
-                "report": ai_message.tool_calls[0]["args"]["report"],
-                "messages": [ai_message, ToolMessage(
-                    tool_call_id=ai_message.tool_calls[0]["id"],
-                    content="Report written."
-                )]
-            }
-        if ai_message.tool_calls[0]["name"] == "WriteResearchQuestion":
-            return {
-                "research_question": ai_message.tool_calls[0]["args"]["research_question"],
-                "messages": [ai_message, ToolMessage(
-                    tool_call_id=ai_message.tool_calls[0]["id"],
-                    content="Research question written."
-                )]
-            }
+        for tool_call in ai_message.tool_calls:
+            tool_message = None
+
+            if tool_call["name"] == "WriteBlogPost":
+                print(tool_call["args"])
+                state["blog_post"] = tool_call["args"]["blog_post"]
+                tool_message = ToolMessage(
+                    tool_call_id=tool_call["id"],
+                    content="Blog post updated."
+                )
+                state["logs"].append({
+                    "message": f"Updated blog post: {tool_call['args']['blog_post']['title']}",
+                    "done": True
+                })
+            
+            elif tool_call["name"] == "GenerateInfographic":
+                print(tool_call["args"])
+                state["quote_info"] = tool_call["args"]["quote_info"]
+                tool_message = ToolMessage(
+                    tool_call_id=tool_call["id"],
+                    content="Quote has been written updated."
+                )
+                state["logs"].append({
+                    "message": f"Quote for blog",
+                    "done": True
+                })
+
+            if tool_message:
+                updated_messages.append(tool_message)
 
     return {
-        "messages": response
+        "blog_post": state["blog_post"],
+        "quote_info": state["quote_info"],
+        "logs": state["logs"],
+        "messages": updated_messages
     }

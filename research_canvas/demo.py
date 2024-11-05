@@ -16,7 +16,7 @@ sdk = CopilotKitSDK(
     agents=[
         LangGraphAgent(
             name="research_agent",
-            description="Research agent.",
+            description="Blog Writer which write blogs and write content based infographics",
             agent=graph,
         )
     ],

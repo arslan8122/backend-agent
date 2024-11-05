@@ -21,7 +21,7 @@ class ResourceInput(BaseModel):
 
 @tool
 def ExtractResources(resources: List[ResourceInput]): # pylint: disable=invalid-name,unused-argument
-    """Extract the 3-5 most relevant resources from a search result."""
+    """Extract the 1-2 most relevant resources from a search result."""
 
 tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
@@ -67,7 +67,7 @@ async def search_node(state: AgentState, config: RunnableConfig):
     ).ainvoke([
         SystemMessage(
             content="""
-            You need to extract the 3-5 most relevant resources from the following search results.
+            You need to extract the 1-2 most relevant resources from the following search results.
             """
         ),
         *state["messages"],
