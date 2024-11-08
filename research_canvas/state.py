@@ -48,13 +48,40 @@ class StepsInfographic(TypedDict):
 
 class ComparisonInfographic(TypedDict):
     """
-    Represents a comparison-based infographic.
+    Represents a comparison-based infographic for side-by-side analysis.
     """
     type: Literal["comparison"]
     title: str
     left_side: List[str]
     right_side: List[str]
+    right_title:str
+    left_title:str
     comparison_aspect: str
+    description: str  # Added to provide context about the comparison
+    conclusion: str 
+
+class StatisticMetric(TypedDict):
+    value:str
+    label: str
+
+class BarMetric(TypedDict):
+    value:int
+    label:str
+
+class StatisticsGroup(TypedDict):
+    """
+    Represents a group of related statistics
+    """
+    title: str
+    description: str
+    stats: List[StatisticMetric]
+
+class BarGroup(TypedDict):
+    """
+    Represents a group of related statistics
+    """
+    title: str
+    stats: List[BarMetric]
 
 Infographic = QuoteInfographic | StepsInfographic | ComparisonInfographic
 
@@ -67,5 +94,9 @@ class AgentState(MessagesState):
     infographics: List[Infographic]
     blog_post: BlogPost  # Current blog post being worked on
     quote_info:QuoteInfographic
+    steps_info:StepsInfographic
+    comparison_info:ComparisonInfographic
+    stats_info:StatisticsGroup
+    bars_info:BarGroup
     resources: List[Resource]  # Reference materials
     logs: List[Log] 
