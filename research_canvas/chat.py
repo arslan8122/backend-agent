@@ -153,7 +153,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
             {{
              "blog_post": {{
                 "title": "string",
-                "content": "string"
+                "content": "string (exactly 3000 words)"
             }}
             }}
 
@@ -215,28 +215,30 @@ async def chat_node(state: AgentState, config: RunnableConfig):
             "bars_info": {{
                 "title": "string",
                 "stats": [
-                    {{"value": "number", "label": "string"}},
-                    {{"value": "number", "label": "string"}},
+                    {{"value": "number (percentage between 0-100)", "label": "string"}},
+                    {{"value": "number (percentage between 0-100)", "label": "string"}},
                     ...
                 ]
             }}
             }}
 
             WORKFLOW REQUIREMENTS:
-            1. First call WriteBlogPost to create the main content
+            1. First call WriteBlogPost to create the main content of exactly 3000 words
             2. Then call GenerateQuoteInfographic with an impactful quote FROM the blog content
             3. Call GenerateStepsInfographic to create a step-by-step guide based on the blog content
             4. Call GenerateComparisonInfographic to create a comparative analysis from the blog content
             5. Call GenerateStatisticsInfographic to highlight key statistics from the blog content
-            6. Finally call GenerateBarChartInfographic to visualize numerical data from the blog content
+            6. Finally call GenerateBarChartInfographic to visualize percentage-based data from the blog content (all values must be between 0-100)
 
             STRICT GUIDELINES:
+            - Blog post must be exactly 3000 words
             - Each infographic must match its specific format exactly
             - The quote infographic must contain a single quote
             - The steps infographic must contain an array of steps
             - The comparison infographic must have equal numbers of points on both sides
             - The statistics infographic must contain at least 3 statistics with values and labels
-            - The bar chart infographic must contain at least 2 bars with values and labels
+            - The bar chart infographic must contain at least 2 bars with percentage values (0-100) and labels
+            - All bar chart values must be expressed as percentages out of 100
             - Do not mix up the tools or their data formats
             - Generate exactly one of each type
 
@@ -253,12 +255,12 @@ async def chat_node(state: AgentState, config: RunnableConfig):
             {resources}
 
             REQUIRED TOOL CALLING SEQUENCE:
-            1. Call WriteBlogPost exactly once
+            1. Call WriteBlogPost exactly once to generate a 3000-word blog post
             2. Call GenerateQuoteInfographic exactly once
             3. Call GenerateStepsInfographic exactly once
             4. Call GenerateComparisonInfographic exactly once
             5. Call GenerateStatisticsInfographic exactly once
-            6. Call GenerateBarChartInfographic exactly once
+            6. Call GenerateBarChartInfographic exactly once with percentage values (0-100)
 
             Ensure each tool receives data in the exact format specified above.
             """
